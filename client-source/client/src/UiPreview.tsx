@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChatCircleDots, Check, ImageSquare, Paperclip, PaperPlane, ShieldCheck, Sliders, UserCircle, UsersThree, X } from "./Icons";
+import { ArrowLeft, ChatCircleDots, Check, DotsThree, ImageSquare, MagnifyingGlass, Paperclip, PaperPlane, Phone, ShieldCheck, Sliders, UserCircle, UsersThree, VideoCamera, X } from "./Icons";
 
 export function UiPreview() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -26,8 +26,8 @@ export function UiPreview() {
       <nav className="app-navigation" aria-label="주요 메뉴"><button className="active"><ChatCircleDots size={22}/><span>대화</span></button><button><UsersThree size={22}/><span>커뮤니티</span></button><button onClick={()=>setProfileOpen(true)}><UserCircle size={22}/><span>프로필</span></button><button><ShieldCheck size={22}/><span>보안</span></button></nav>
     </aside>
     <section className="chat-panel">
-      <header className="chat-header"><button className="mobile-back">이전</button><div className="avatar large">C</div><div className="chat-title"><strong>chiwon2</strong><span className="typing-label">입력 중…</span></div><div className="chat-actions"><button onClick={() => setSearchOpen(v => !v)}>검색</button><button onClick={() => setChatMenuOpen(v => !v)}>대화 설정</button>{chatMenuOpen && <div className="popover-menu chat-menu"><button>상단에 고정</button><button>알림 끄기</button><button>대화 보관</button></div>}</div></header>
-      <div className="security-summary"><span>상대 장치 신원 확인 완료</span><button>상대 장치 확인</button></div>
+      <header className="chat-header"><button className="mobile-back header-icon" aria-label="대화 목록"><ArrowLeft size={23}/></button><div className="avatar large">C</div><div className="chat-title"><strong>chiwon2</strong><span className="typing-label"><i className="presence-dot online"></i>입력 중…</span></div><div className="chat-actions"><button className="header-icon" aria-label="음성 통화"><Phone size={19}/></button><button className="header-icon" aria-label="영상 통화"><VideoCamera size={20}/></button><button className="header-icon" aria-label="검색" onClick={() => setSearchOpen(v => !v)}><MagnifyingGlass size={20}/></button><button className="header-icon" aria-label="대화 설정" onClick={() => setChatMenuOpen(v => !v)}><DotsThree size={22}/></button>{chatMenuOpen && <div className="popover-menu chat-menu"><button>상단에 고정</button><button>알림 끄기</button><button>대화 보관</button></div>}</div></header>
+      <button className="security-summary verified"><ShieldCheck size={17}/><span>안전번호 확인 완료 · 비밀 메시지 사용 가능</span><b>보안 정보</b></button>
       {searchOpen && <div className="message-search"><input autoFocus placeholder="이 대화에서 검색"/><button onClick={() => setSearchOpen(false)}>닫기</button></div>}
       <div className="messages">
         <article className="bubble theirs"><p>와와</p><time>오후 3:38</time></article>

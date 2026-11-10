@@ -14,3 +14,8 @@ export const UsersThree=({size,className}:IconProps)=><Icon size={size} classNam
 export const Paperclip=({size,className}:IconProps)=><Icon size={size} className={className}><path d="m9 12 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l8-8"/></Icon>;
 export const PaperPlane=({size,className}:IconProps)=><Icon size={size} className={className}><path d="m21 3-7 18-4-7-7-4zM10 14 21 3"/></Icon>;
 export const Sliders=({size,className}:IconProps)=><Icon size={size} className={className}><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></Icon>;
+export const ArrowLeft=({size,className}:IconProps)=><Icon size={size} className={className}><path d="m15 18-6-6 6-6"/></Icon>;
+export const MagnifyingGlass=({size,className}:IconProps)=><Icon size={size} className={className}><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></Icon>;
+export const DotsThree=({size,className}:IconProps)=><Icon size={size} className={className}><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/></Icon>;
+export const Phone=({size,className}:IconProps)=><Icon size={size} className={className}><path d="M7 4 4 6c0 7.7 6.3 14 14 14l2-3-4-3-2 2c-2.8-1-5-3.2-6-6l2-2z"/></Icon>;
+export const VideoCamera=({size,className}:IconProps)=><Icon size={size} className={className}><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></Icon>;
