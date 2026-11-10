@@ -15,7 +15,7 @@ export function UiPreview() {
       <header className="sidebar-header">
         <div className="sidebar-identity"><span className="avatar">C</span><div><strong>chiwon1<span className="unread-total">2</span></strong><span className="status online">온라인</span></div></div>
         <button className="menu-trigger" onClick={() => setMenuOpen(v => !v)}>메뉴</button>
-        {menuOpen && <div className="popover-menu sidebar-menu"><button>프로필</button><button>신뢰 장치</button><button>Arduino 보안</button><button>알림 설정</button><button className="menu-danger">로그아웃</button></div>}
+        {menuOpen && <div className="popover-menu sidebar-menu"><span className="menu-section">계정</span><button>프로필</button><button>친구 · 그룹 · 서버</button><button>알림 설정</button><span className="menu-section">보안</span><button>신뢰 장치</button><button>Arduino 보안</button><button className="menu-danger">로그아웃</button></div>}
       </header>
       <form className="search-box"><input placeholder="대화 검색 · Enter로 사용자 찾기" /></form>
       <div className="conversation-filter" role="tablist" aria-label="대화 필터"><button className="selected" role="tab" aria-selected="true">전체</button><button role="tab">안 읽음</button><button role="tab">보관함</button></div>
