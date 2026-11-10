@@ -19,7 +19,8 @@ verification rules in [SECURITY.md](SECURITY.md).
 
 Read [the customization boundary](docs/CUSTOMIZATION_BOUNDARY.md),
 [protocol governance](docs/PROTOCOL_GOVERNANCE.md), and
-[architecture](ARCHITECTURE.md) before contributing.
+[architecture](ARCHITECTURE.md) before contributing. UI work should also follow
+the research-backed [interaction design foundations](docs/DESIGN_FOUNDATIONS.md).
 
 ## Local development
 

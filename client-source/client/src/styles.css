@@ -372,6 +372,15 @@ button,.file-button,.conversation-list>button{-webkit-tap-highlight-color:transp
   .auth-card{width:100%;min-height:0;padding:24px 18px;border-radius:18px}.auth-card h1{font-size:22px}
   .call-card{padding:calc(16px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom))}.call-actions button{min-height:48px;flex:1}
 }
+
+/* Evidence-based interaction layer: visible focus, bounded choices, and touch
+   targets sized for reliable thumb input rather than decorative density. */
+button,[role="button"]{min-width:24px;min-height:24px}
+button:focus-visible,.file-button:focus-within,summary:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #8bc5ff!important;outline-offset:2px}
+.popover-menu{padding:6px}.popover-menu .menu-section{display:block;padding:9px 11px 4px;color:#6f8297;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;pointer-events:none}.popover-menu .menu-section:not(:first-child){margin-top:4px;border-top:1px solid #ffffff0c}.popover-menu button{min-height:40px}
+.toast{animation:none}.conversation-list>button:focus-visible{outline-offset:-2px!important}
+@media(max-width:700px){button,.file-button,[role="button"]{min-height:44px}.popover-menu button{min-height:48px}.menu-section{min-height:24px!important}}
+@media(prefers-contrast:more){:root{--line:#6f8499}.bubble,.conversation-list>button.selected,.security-summary{border-color:currentColor}.muted,.notice,.chat-title span,.conversation-copy small{color:#bdc9d5}}
 @media(max-width:700px) and (orientation:landscape){.call-card{grid-template-columns:minmax(0,1fr) auto;align-items:center}.call-videos{grid-row:1/5;min-height:0}.call-videos video:first-child{height:100vh;height:100dvh}.call-actions{flex-direction:column}.call-toolbar>span{display:none}.messages{padding-block:7px}}
 
 .compatibility-card{max-width:560px}.compatibility-card .brand-mark{margin-bottom:12px}.compatibility-card ul{display:grid;gap:7px;margin:12px 0 18px;padding-left:22px;color:#ffd39a}.compatibility-card button{width:100%;margin-top:8px}
