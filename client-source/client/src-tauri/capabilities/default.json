@@ -1,0 +1,31 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "AKFES local main webview: explicit application command allow-list only.",
+  "windows": [
+    "main"
+  ],
+  "local": true,
+  "permissions": [
+    "core:default",
+    "allow-ensure-device-identity",
+    "allow-ensure-e2ee-bundle",
+    "allow-bind-server-device",
+    "allow-clear-server-device-binding",
+    "allow-peer-identity-status",
+    "allow-verify-peer-identity",
+    "allow-encrypt-text-with-ratchet",
+    "allow-decrypt-text-with-ratchet",
+    "allow-decrypt-own-sent-ratchet",
+    "allow-has-ratchet-session",
+    "allow-consume-local-one-time-prekey",
+    "allow-encrypt-file-bytes",
+    "allow-decrypt-file-bytes",
+    "allow-sign-device-proof",
+    "allow-list-arduino-ports",
+    "allow-provision-local-arduino",
+    "allow-upgrade-local-arduino-keypad",
+    "allow-arduino-enroll-pin",
+    "allow-arduino-challenge"
+  ]
+}

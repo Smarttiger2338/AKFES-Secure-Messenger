@@ -1,0 +1,283 @@
+name: akfes-production
+
+x-logging: &akfes-logging
+  driver: local
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+x-app: &akfes-app
+  logging: *akfes-logging
+  read_only: true
+  restart: unless-stopped
+  security_opt: ["no-new-privileges=true"]
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=32m
+    - /run/zt:rw,noexec,nosuid,size=16m
+  build:
+    context: ../../server
+    args:
+      PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:?immutable PYTHON_BASE_IMAGE required}
+  networks: [backend]
+
+services:
+  db:
+    logging: *akfes-logging
+    image: ${POSTGRES_IMAGE:?immutable POSTGRES_IMAGE required}
+    restart: unless-stopped
+    mem_limit: 448m
+    pids_limit: 160
+    shm_size: 128m
+    environment:
+      POSTGRES_DB: akfes
+      POSTGRES_USER: bootstrap_admin
+      POSTGRES_PASSWORD: ${POSTGRES_BOOTSTRAP_PASSWORD:?missing POSTGRES_BOOTSTRAP_PASSWORD}
+      POSTGRES_API_PASSWORD: ${POSTGRES_API_PASSWORD:?missing POSTGRES_API_PASSWORD}
+      POSTGRES_AUTH_PASSWORD: ${POSTGRES_AUTH_PASSWORD:?missing POSTGRES_AUTH_PASSWORD}
+      POSTGRES_NODE2_PASSWORD: ${POSTGRES_NODE2_PASSWORD:?missing POSTGRES_NODE2_PASSWORD}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=scram-sha-256
+    entrypoint: ["/bin/sh", "/opt/akfes/start-postgres.sh"]
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/var/lib/postgresql/zt-tls/server.crt
+      - -c
+      - ssl_key_file=/var/lib/postgresql/zt-tls/server.key
+      - -c
+      - ssl_ca_file=/var/lib/postgresql/zt-tls/ca.crt
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - max_connections=40
+      - -c
+      - shared_buffers=192MB
+      - -c
+      - effective_cache_size=768MB
+    volumes:
+      - ${AKFES_DATA_DIR:?missing AKFES_DATA_DIR}/postgres:/var/lib/postgresql/data
+      - ../components/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ../components/postgres/01-init-roles.sh:/docker-entrypoint-initdb.d/01-init-roles.sh:ro
+      - ../components/postgres/start-postgres.sh:/opt/akfes/start-postgres.sh:ro
+      - ${AKFES_SECRETS_DIR:?missing AKFES_SECRETS_DIR}/node1-db:/run/tls-ro:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U akfes_api -d akfes"]
+      interval: 8s
+      timeout: 4s
+      retries: 20
+    networks: [backend]
+
+  security-redis:
+    logging: *akfes-logging
+    image: ${REDIS_IMAGE:?immutable REDIS_IMAGE required}
+    restart: unless-stopped
+    mem_limit: 128m
+    pids_limit: 80
+    environment:
+      REDIS_SECURITY_AUTH_PASSWORD: ${REDIS_SECURITY_AUTH_PASSWORD:?missing REDIS_SECURITY_AUTH_PASSWORD}
+      REDIS_SECURITY_API_PASSWORD: ${REDIS_SECURITY_API_PASSWORD:?missing REDIS_SECURITY_API_PASSWORD}
+      REDIS_SECURITY_NODE2_PASSWORD: ${REDIS_SECURITY_NODE2_PASSWORD:?missing REDIS_SECURITY_NODE2_PASSWORD}
+    entrypoint: ["/bin/sh", "/opt/akfes/start-security-redis.sh"]
+    volumes:
+      - ../components/redis/start-security-redis.sh:/opt/akfes/start-security-redis.sh:ro
+      - ${AKFES_SECRETS_DIR}/node1-security-redis:/run/tls-ro:ro
+      - ${AKFES_DATA_DIR}/security-redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --tls -p 6380 --cacert /run/tls/ca.crt --cert /run/tls/node1-api.crt --key /run/tls/node1-api.key --user akfes_api_sec --pass \"$${REDIS_SECURITY_API_PASSWORD}\" ping | grep -q PONG"]
+      interval: 8s
+      timeout: 4s
+      retries: 20
+    networks: [backend]
+
+  realtime-redis:
+    logging: *akfes-logging
+    image: ${REDIS_IMAGE:?immutable REDIS_IMAGE required}
+    restart: unless-stopped
+    mem_limit: 160m
+    pids_limit: 80
+    environment:
+      REDIS_REALTIME_AUTH_PASSWORD_SHA256: ${REDIS_REALTIME_AUTH_PASSWORD_SHA256:?missing realtime auth hash}
+      REDIS_REALTIME_API_PASSWORD_SHA256: ${REDIS_REALTIME_API_PASSWORD_SHA256:?missing realtime api hash}
+      REDIS_REALTIME_NODE2_PASSWORD_SHA256: ${REDIS_REALTIME_NODE2_PASSWORD_SHA256:?missing realtime node2 hash}
+      REDIS_REALTIME_NODE2_PASSWORD: ${REDIS_REALTIME_NODE2_PASSWORD:?missing realtime health password}
+    entrypoint: ["/bin/sh", "/opt/akfes/start-redis.sh"]
+    volumes:
+      - ../components/redis/start-redis.sh:/opt/akfes/start-redis.sh:ro
+      - ${AKFES_SECRETS_DIR}/node2:/run/tls-ro:ro
+      - ${AKFES_DATA_DIR}/realtime-redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --tls -p 6379 --cacert /run/tls/ca.crt --cert /run/tls/node2-api.crt --key /run/tls/node2-api.key --user akfes_node2_rt --pass \"$${REDIS_REALTIME_NODE2_PASSWORD}\" ping | grep -q PONG"]
+      interval: 8s
+      timeout: 4s
+      retries: 20
+    networks: [backend]
+
+  api:
+    <<: *akfes-app
+    networks: [backend, edge]
+    mem_limit: 320m
+    pids_limit: 160
+    env_file:
+      - .env.production
+      - ${AKFES_SECRET_ENV:-/opt/akfes/secrets/production.env}
+    environment:
+      ROUTE_PROFILE: api
+      CONTROL_PLANE_ENABLED: "true"
+      AUTH_ISSUER_ENABLED: "false"
+      ARDUINO_VERIFIER_ENABLED: "false"
+      ARDUINO_MASTER_SECRET: NOT-PROVISIONED-IN-API
+      AUTO_CREATE_SCHEMA: "true"
+      FILES_ENABLED: "true"
+      DATABASE_URL: postgresql+asyncpg://akfes_api:${POSTGRES_API_PASSWORD}@db:5432/akfes
+      REDIS_SECURITY_URL: rediss://akfes_api_sec:${REDIS_SECURITY_API_PASSWORD}@security-redis:6380/0
+      REDIS_REALTIME_URL: rediss://akfes_api_rt:${REDIS_REALTIME_API_PASSWORD}@realtime-redis:6379/0
+      REDIS_REALTIME_SUBSCRIBE_ENABLED: "false"
+      DB_TLS_CA_FILE: /run/zt/ca.crt
+      DB_TLS_CERT_FILE: /run/zt/node1-api.crt
+      DB_TLS_KEY_FILE: /run/zt/node1-api.key
+      REDIS_TLS_CA_FILE: /run/zt/ca.crt
+      REDIS_TLS_CERT_FILE: /run/zt/node1-api.crt
+      REDIS_TLS_KEY_FILE: /run/zt/node1-api.key
+      JWT_PRIVATE_KEY_FILE: ""
+      JWT_PUBLIC_KEY_FILE: /run/zt/jwt-public.pem
+      # The published port is loopback-only. Trust Caddy's forwarded client IP
+      # after Docker NAT instead of rate-limiting every user as one gateway IP.
+      FORWARDED_ALLOW_IPS: "*"
+      FILES_DIR: /app/encrypted-files
+      ADMIN_USERNAMES: '["admin"]'
+      ADMIN_MFA_ENCRYPTION_KEY: ${ADMIN_MFA_ENCRYPTION_KEY:?missing administrator MFA key}
+      ADMIN_WEBAUTHN_RP_ID: api.akfes.pe.kr
+      ADMIN_WEBAUTHN_ORIGIN: https://api.akfes.pe.kr
+    volumes:
+      - ${AKFES_SECRETS_DIR}/node1-api:/run/zt-ro:ro
+      - ${AKFES_DATA_DIR}/files:/app/encrypted-files
+    ports: ["127.0.0.1:18001:8000"]
+    depends_on:
+      db: {condition: service_healthy}
+      security-redis: {condition: service_healthy}
+      realtime-redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/health/ready\",timeout=2)'"]
+      interval: 8s
+      timeout: 4s
+      retries: 25
+
+  realtime:
+    <<: *akfes-app
+    networks: [backend, edge]
+    mem_limit: 192m
+    pids_limit: 128
+    env_file:
+      - .env.production
+      - ${AKFES_SECRET_ENV:-/opt/akfes/secrets/production.env}
+    environment:
+      ROUTE_PROFILE: realtime
+      CONTROL_PLANE_ENABLED: "false"
+      AUTH_ISSUER_ENABLED: "false"
+      ARDUINO_VERIFIER_ENABLED: "false"
+      ARDUINO_MASTER_SECRET: NOT-PROVISIONED-IN-REALTIME
+      ADMIN_USERNAMES: '[]'
+      ADMIN_MFA_ENCRYPTION_KEY: NOT-PROVISIONED-IN-REALTIME
+      AUTO_CREATE_SCHEMA: "false"
+      FILES_ENABLED: "false"
+      DATABASE_URL: postgresql+asyncpg://akfes_node2:${POSTGRES_NODE2_PASSWORD}@db:5432/akfes
+      REDIS_SECURITY_URL: rediss://akfes_node2_sec:${REDIS_SECURITY_NODE2_PASSWORD}@security-redis:6380/0
+      REDIS_REALTIME_URL: rediss://akfes_node2_rt:${REDIS_REALTIME_NODE2_PASSWORD}@realtime-redis:6379/0
+      REDIS_REALTIME_SUBSCRIBE_ENABLED: "true"
+      DB_TLS_CA_FILE: /run/zt/ca.crt
+      DB_TLS_CERT_FILE: /run/zt/node2-api.crt
+      DB_TLS_KEY_FILE: /run/zt/node2-api.key
+      REDIS_TLS_CA_FILE: /run/zt/ca.crt
+      REDIS_TLS_CERT_FILE: /run/zt/node2-api.crt
+      REDIS_TLS_KEY_FILE: /run/zt/node2-api.key
+      JWT_PRIVATE_KEY_FILE: ""
+      JWT_PUBLIC_KEY_FILE: /run/zt/jwt-public.pem
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - ${AKFES_SECRETS_DIR}/node2:/run/zt-ro:ro
+    ports: ["127.0.0.1:18002:8000"]
+    depends_on:
+      grants: {condition: service_completed_successfully}
+      security-redis: {condition: service_healthy}
+      realtime-redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/health/ready\",timeout=2)'"]
+      interval: 8s
+      timeout: 4s
+      retries: 25
+
+  grants:
+    logging: *akfes-logging
+    image: ${POSTGRES_IMAGE:?immutable POSTGRES_IMAGE required}
+    read_only: true
+    mem_limit: 128m
+    pids_limit: 80
+    security_opt: ["no-new-privileges=true"]
+    tmpfs: ["/run/zt:rw,noexec,nosuid,size=4m"]
+    environment:
+      PGPASSWORD: ${POSTGRES_API_PASSWORD}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: /run/zt/ca.crt
+      PGSSLCERT: /run/zt/node1-api.crt
+      PGSSLKEY: /run/zt/node1-api.key
+    entrypoint: ["/bin/sh", "-ec"]
+    command: ["cp /run/zt-ro/* /run/zt/ && chmod 600 /run/zt/node1-api.key && chmod 644 /run/zt/*.crt && exec psql -h db -U akfes_api -d akfes -v ON_ERROR_STOP=1 -f /sql/apply-runtime-grants.sql"]
+    volumes:
+      - ../components/postgres/apply-runtime-grants.sql:/sql/apply-runtime-grants.sql:ro
+      - ${AKFES_SECRETS_DIR}/node1-api:/run/zt-ro:ro
+    depends_on:
+      api: {condition: service_healthy}
+    networks: [backend]
+
+  auth:
+    <<: *akfes-app
+    networks: [backend, edge]
+    mem_limit: 256m
+    pids_limit: 160
+    env_file:
+      - .env.production
+      - ${AKFES_SECRET_ENV:-/opt/akfes/secrets/production.env}
+    environment:
+      ROUTE_PROFILE: auth
+      REDIS_REALTIME_SUBSCRIBE_ENABLED: "false"
+      CONTROL_PLANE_ENABLED: "false"
+      AUTH_ISSUER_ENABLED: "true"
+      ARDUINO_VERIFIER_ENABLED: "true"
+      ADMIN_USERNAMES: '[]'
+      ADMIN_MFA_ENCRYPTION_KEY: NOT-PROVISIONED-IN-AUTH
+      EMAIL_SMTP_PASSWORD: ""
+      SMS_WEBHOOK_BEARER: ""
+      AUTO_CREATE_SCHEMA: "false"
+      FILES_ENABLED: "false"
+      DATABASE_URL: postgresql+asyncpg://akfes_auth:${POSTGRES_AUTH_PASSWORD}@db:5432/akfes
+      REDIS_SECURITY_URL: rediss://akfes_auth_sec:${REDIS_SECURITY_AUTH_PASSWORD}@security-redis:6380/0
+      REDIS_REALTIME_URL: rediss://akfes_auth_rt:${REDIS_REALTIME_AUTH_PASSWORD}@realtime-redis:6379/0
+      DB_TLS_CA_FILE: /run/zt/ca.crt
+      DB_TLS_CERT_FILE: /run/zt/node1-auth.crt
+      DB_TLS_KEY_FILE: /run/zt/node1-auth.key
+      REDIS_TLS_CA_FILE: /run/zt/ca.crt
+      REDIS_TLS_CERT_FILE: /run/zt/node1-auth.crt
+      REDIS_TLS_KEY_FILE: /run/zt/node1-auth.key
+      JWT_PRIVATE_KEY_FILE: /run/zt/jwt-private.pem
+      JWT_PUBLIC_KEY_FILE: /run/zt/jwt-public.pem
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - ${AKFES_SECRETS_DIR}/node1-auth:/run/zt-ro:ro
+    ports: ["127.0.0.1:18003:8000"]
+    depends_on:
+      grants: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/health/ready\",timeout=2)'"]
+      interval: 8s
+      timeout: 4s
+      retries: 25
+
+networks:
+  backend:
+    driver: bridge
+    internal: true
+  edge:
+    driver: bridge

@@ -1,0 +1,21 @@
+{
+  "name": "AKFES Secure Messenger",
+  "short_name": "AKFES",
+  "description": "장치별 암호화를 사용하는 보안 메신저",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e1621",
+  "theme_color": "#17212b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "security", "productivity"]
+}

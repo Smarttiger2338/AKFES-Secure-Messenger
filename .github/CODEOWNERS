@@ -1,0 +1,11 @@
+# Security-boundary paths always require the repository owner.
+/server-source/ @Smarttiger2338
+/client-source/client/src/api.ts @Smarttiger2338
+/client-source/client/src/crypto.ts @Smarttiger2338
+/client-source/client/src/web-crypto.ts @Smarttiger2338
+/client-source/client/src/protocol.ts @Smarttiger2338
+/client-source/client/src-tauri/ @Smarttiger2338
+/client-source/arduino/ @Smarttiger2338
+/*RELEASE*.ps1 @Smarttiger2338
+/DEPLOY_*.ps1 @Smarttiger2338
+/SECURITY.md @Smarttiger2338

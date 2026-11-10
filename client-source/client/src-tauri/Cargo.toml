@@ -1,0 +1,32 @@
+[package]
+name = "akfes-messenger-client"
+version = "0.1.0"
+description = "AKFES Secure Messenger desktop client"
+authors = ["Smarttiger2338"]
+edition = "2021"
+
+[features]
+default = []
+local-test-provisioning = []
+
+[lib]
+name = "akfes_messenger_client_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+akfes-core = { path = "../../akfes-core" }
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+zeroize = "1"
+keyring = { version = "3", features = ["windows-native"] }
+serialport = "4"
+
+rand = "0.8"
+sha2 = "0.10"
+hex = "0.4"
+hmac = "0.12"

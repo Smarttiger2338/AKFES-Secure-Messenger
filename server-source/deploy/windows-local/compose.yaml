@@ -1,0 +1,110 @@
+name: akfes-local
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: akfes
+      POSTGRES_USER: akfes
+      POSTGRES_PASSWORD: ${AKFES_LOCAL_DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U akfes -d akfes"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  security-redis:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - security-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  realtime-redis:
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/windows-local/Dockerfile
+    environment:
+      DEBUG: "true"
+      ROUTE_PROFILE: all
+      CONTROL_PLANE_ENABLED: "true"
+      AUTO_CREATE_SCHEMA: "true"
+      DATABASE_URL: postgresql+asyncpg://akfes:${AKFES_LOCAL_DB_PASSWORD}@db:5432/akfes
+      REDIS_URL: redis://security-redis:6379/0
+      REDIS_SECURITY_URL: redis://security-redis:6379/0
+      REDIS_REALTIME_URL: redis://realtime-redis:6379/0
+      REDIS_TLS_ENABLED: "false"
+      REDIS_REQUIRED_FOR_READY: "true"
+      AUTH_ISSUER_ENABLED: "true"
+      ARDUINO_VERIFIER_ENABLED: "true"
+      ARDUINO_MASTER_SECRET: ${AKFES_LOCAL_ARDUINO_SECRET}
+      REGISTRATION_INVITE_SHA256: ${AKFES_LOCAL_INVITE_SHA256}
+      REQUIRE_FIRST_DEVICE_ARDUINO: "false"
+      JWT_ALGORITHM: RS256
+      JWT_PRIVATE_KEY_FILE: /run/akfes-local/jwt-private.pem
+      JWT_PUBLIC_KEY_FILE: /run/akfes-local/jwt-public.pem
+      JWT_ISSUER: akfes-auth
+      JWT_AUDIENCE: akfes-api
+      SECRET_KEY: ${AKFES_LOCAL_APP_SECRET}
+      ADMIN_USERNAMES: '${AKFES_LOCAL_ADMIN_USERNAMES}'
+      ADMIN_MFA_ENCRYPTION_KEY: ${AKFES_LOCAL_ADMIN_MFA_SECRET}
+      ADMIN_WEBAUTHN_RP_ID: 127.0.0.1
+      ADMIN_WEBAUTHN_ORIGIN: http://127.0.0.1:1420
+      WS_ALLOWED_ORIGINS: '["http://127.0.0.1:1420","http://localhost:1420","tauri://localhost","http://tauri.localhost"]'
+      CORS_ORIGINS: '["http://127.0.0.1:1420","http://localhost:1420","tauri://localhost","http://tauri.localhost"]'
+      TRUSTED_HOSTS: '["127.0.0.1","localhost"]'
+      FILES_DIR: /app/encrypted-files
+    depends_on:
+      db:
+        condition: service_healthy
+      security-redis:
+        condition: service_healthy
+      realtime-redis:
+        condition: service_healthy
+    volumes:
+      - jwt-keys:/run/akfes-local
+      - encrypted-files:/app/encrypted-files
+    ports:
+      - "127.0.0.1:18001:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 40
+    restart: unless-stopped
+
+  web:
+    image: nginx:1.27-alpine
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:1420:80"
+    volumes:
+      - ../../../client-source/client/dist:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  security-data:
+  jwt-keys:
+  encrypted-files:

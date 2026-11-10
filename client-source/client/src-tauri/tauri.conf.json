@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AKFES Secure Messenger",
+  "version": "12.4.25",
+  "identifier": "io.github.smarttiger2338.akfes.messenger",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "AKFES Secure Messenger",
+        "width": 1180,
+        "height": 760,
+        "minWidth": 760,
+        "minHeight": 520,
+        "center": true,
+        "contentProtected": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' https://api.akfes.pe.kr wss://api.akfes.pe.kr; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: blob:; object-src 'none'; frame-src blob:; base-uri 'none'; form-action 'none'",
+      "capabilities": [
+        "main-capability"
+      ],
+      "headers": {
+        "Permissions-Policy": "camera=(self), microphone=(self), display-capture=()"
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ]
+  }
+}

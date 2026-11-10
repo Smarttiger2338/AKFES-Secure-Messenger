@@ -1,0 +1,53 @@
+name: source-validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client-source/client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client-source/client/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build
+      - run: npm run test:call-signal
+
+  server-source:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server-source/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: server-source/server/requirements.lock
+      - run: pip install --require-hashes -r requirements.lock
+      - run: python -m compileall -q app tests
+      - run: pytest -q
+
+  deployment-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f server-source/deploy/vultr-production/docker-compose.yml --env-file server-source/deploy/vultr-production/.env.production.example config --no-interpolate >/dev/null

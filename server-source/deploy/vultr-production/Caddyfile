@@ -1,0 +1,40 @@
+api.akfes.pe.kr {
+    encode zstd gzip
+
+    @auth path /api/auth/* /api/arduino/*
+    handle @auth {
+        reverse_proxy 127.0.0.1:18003
+    }
+
+    @realtime path /ws
+    handle @realtime {
+        reverse_proxy 127.0.0.1:18002
+    }
+
+    @backend path /api/* /health/*
+    handle @backend {
+        reverse_proxy 127.0.0.1:18001
+    }
+
+    handle {
+        root * /var/www/akfes
+        # The entry page chooses the content-addressed JavaScript bundle. Do
+        # not let an old cached index.html keep clients on an earlier release.
+        header Cache-Control "no-store, max-age=0"
+        try_files {path} /index.html
+        file_server
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self' wss://api.akfes.pe.kr; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'"
+        Permissions-Policy "camera=(self), display-capture=(), geolocation=(), microphone=(self), payment=(), publickey-credentials-create=(self), publickey-credentials-get=(self), usb=()"
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Resource-Policy "same-origin"
+        -Server
+    }
+
+}
