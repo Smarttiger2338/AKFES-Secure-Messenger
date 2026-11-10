@@ -19,8 +19,8 @@ jobs:
       run:
         working-directory: client-source/client
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -36,18 +36,18 @@ jobs:
       run:
         working-directory: server-source/server
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: server-source/server/requirements.lock
       - run: pip install --require-hashes -r requirements.lock
       - run: python -m compileall -q app tests
-      - run: pytest -q
+      - run: python -m pytest -q
 
   deployment-contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: docker compose -f server-source/deploy/vultr-production/docker-compose.yml --env-file server-source/deploy/vultr-production/.env.production.example config --no-interpolate >/dev/null
